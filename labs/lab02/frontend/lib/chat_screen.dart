@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_service.dart';
 
-// ChatScreen displays the chat UI
 class ChatScreen extends StatefulWidget {
   final ChatService chatService;
   const ChatScreen({Key? key, required this.chatService}) : super(key: key);
@@ -12,23 +11,19 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  // TODO: Add loading/error state if needed
-
-  @override
-  void initState() {
-    super.initState();
-    // TODO: Connect to chat service
-  }
 
   @override
   void dispose() {
     _controller.dispose();
-    // TODO: Dispose chat service if needed
     super.dispose();
   }
 
   void _sendMessage() {
-    // TODO: Send message using chatService
+    final text = _controller.text.trim();
+    if (text.isNotEmpty) {
+      widget.chatService.sendMessage(text);
+      _controller.clear();
+    }
   }
 
   @override
@@ -41,12 +36,20 @@ class _ChatScreenState extends State<ChatScreen> {
             child: StreamBuilder<String>(
               stream: widget.chatService.messageStream,
               builder: (context, snapshot) {
-                // TODO: Display messages, loading, and error states
-                return ListView(
-                  children: [
-                    // TODO: Build message widgets from snapshot.data
-                  ],
-                );
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return const Center(child: Text('Ошибка загрузки'));
+                } else if (snapshot.hasData) {
+                  return ListView(
+                    key: const Key('messageList'),
+                    children: [
+                      ListTile(title: Text(snapshot.data!)),
+                    ],
+                  );
+                } else {
+                  return const Center(child: Text('Нет сообщений'));
+                }
               },
             ),
           ),
@@ -56,12 +59,13 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Expanded(
                   child: TextField(
+                    key: const Key('messageField'),
                     controller: _controller,
-                    decoration:
-                        const InputDecoration(hintText: 'Type a message'),
+                    decoration: const InputDecoration(hintText: 'Type a message'),
                   ),
                 ),
                 IconButton(
+                  key: const Key('sendButton'),
                   icon: const Icon(Icons.send),
                   onPressed: _sendMessage,
                 ),

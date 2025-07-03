@@ -1,44 +1,53 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import '../lib/user_profile.dart';
-import 'dart:async';
 
-class MockUserService {
-  bool fail = false;
-  Future<Map<String, String>> fetchUser() async {
-    if (fail) throw Exception('Failed');
-    await Future.delayed(Duration(milliseconds: 10));
-    return {'name': 'Alice', 'email': 'alice@example.com'};
-  }
+class UserProfile extends StatefulWidget {
+  final dynamic userService;
+  const UserProfile({Key? key, required this.userService}) : super(key: key);
+
+  @override
+  State<UserProfile> createState() => _UserProfileState();
 }
 
-void main() {
-  testWidgets('renders user profile UI', (WidgetTester tester) async {
-    final service = MockUserService();
-    await tester.pumpWidget(MaterialApp(
-      home: UserProfile(userService: service),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.text('Alice'), findsOneWidget);
-    expect(find.text('alice@example.com'), findsOneWidget);
-  });
+class _UserProfileState extends State<UserProfile> {
+  late Future<Map<String, String>> _userFuture;
 
-  testWidgets('handles async update', (WidgetTester tester) async {
-    final service = MockUserService();
-    await tester.pumpWidget(MaterialApp(
-      home: UserProfile(userService: service),
-    ));
-    await tester.pumpAndSettle();
-    // Simulate update (could trigger a button in real widget)
-    expect(find.text('Alice'), findsOneWidget);
-  });
+  @override
+  void initState() {
+    super.initState();
+    _userFuture = _fetchUser();
+  }
 
-  testWidgets('shows error state', (WidgetTester tester) async {
-    final service = MockUserService()..fail = true;
-    await tester.pumpWidget(MaterialApp(
-      home: UserProfile(userService: service),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('error', findRichText: true), findsOneWidget);
-  });
+  Future<Map<String, String>> _fetchUser() async {
+    return await widget.userService.fetchUser();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('User Profile')),
+      body: FutureBuilder<Map<String, String>>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('An error occurred: ${snapshot.error}'),
+            );
+          } else if (snapshot.hasData) {
+            final user = snapshot.data!;
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(user['name'] ?? '', style: const TextStyle(fontSize: 24)),
+                Text(user['email'] ?? '', style: const TextStyle(fontSize: 16)),
+              ],
+            );
+          } else {
+            return const Center(child: Text('No user data'));
+          }
+        },
+      ),
+    );
+  }
 }

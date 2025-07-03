@@ -1,22 +1,30 @@
 import 'dart:async';
 
-// ChatService handles chat logic and backend communication
 class ChatService {
-  // TODO: Add StreamController for incoming messages
-  // TODO: Add connection state, error state, etc.
+  final StreamController<String> _controller = StreamController<String>.broadcast();
 
-  ChatService();
+  bool _failSend = false;
+
+  ChatService({bool failSend = false}) {
+    _failSend = failSend;
+  }
 
   Future<void> connect() async {
-    // TODO: Connect to backend or mock
+    await Future.delayed(Duration(milliseconds: 100));
   }
 
   Future<void> sendMessage(String msg) async {
-    // TODO: Send message to backend or mock
+    if (_failSend) {
+      throw Exception('Send failed');
+    }
+
+    await Future.delayed(Duration(milliseconds: 50));
+    _controller.add(msg);
   }
 
-  Stream<String> get messageStream {
-    // TODO: Return stream of incoming messages
-    throw UnimplementedError();
+  Stream<String> get messageStream => _controller.stream;
+
+  void dispose() {
+    _controller.close();
   }
 }
