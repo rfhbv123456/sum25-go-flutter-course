@@ -3,22 +3,23 @@ import 'dart:async';
 class ChatService {
   final StreamController<String> _controller = StreamController<String>.broadcast();
 
-  bool _failSend = false;
+  bool failSend = false;
+  bool failConnect = false;
 
-  ChatService({bool failSend = false}) {
-    _failSend = failSend;
-  }
+  ChatService();
 
   Future<void> connect() async {
-    await Future.delayed(Duration(milliseconds: 100));
+    if (failConnect) {
+      throw Exception('Connect failed');
+    }
+    await Future.delayed(const Duration(milliseconds: 10));
   }
 
   Future<void> sendMessage(String msg) async {
-    if (_failSend) {
+    if (failSend) {
       throw Exception('Send failed');
     }
-
-    await Future.delayed(Duration(milliseconds: 50));
+    await Future.delayed(const Duration(milliseconds: 10));
     _controller.add(msg);
   }
 

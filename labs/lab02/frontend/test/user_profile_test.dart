@@ -1,53 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lab02_chat/user_profile.dart';
+import 'package:lab02_chat/user_service.dart';
 
-class UserProfile extends StatefulWidget {
-  final dynamic userService;
-  const UserProfile({Key? key, required this.userService}) : super(key: key);
-
+class MockUserService extends UserService {
+  bool fail = false;
   @override
-  State<UserProfile> createState() => _UserProfileState();
+  Future<Map<String, String>> fetchUser() async {
+    if (fail) throw Exception('Failed');
+    await Future.delayed(Duration(milliseconds: 10));
+    return {'name': 'Alice', 'email': 'alice@example.com'};
+  }
 }
 
-class _UserProfileState extends State<UserProfile> {
-  late Future<Map<String, String>> _userFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _userFuture = _fetchUser();
-  }
-
-  Future<Map<String, String>> _fetchUser() async {
-    return await widget.userService.fetchUser();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('User Profile')),
-      body: FutureBuilder<Map<String, String>>(
-        future: _userFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text('An error occurred: ${snapshot.error}'),
-            );
-          } else if (snapshot.hasData) {
-            final user = snapshot.data!;
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(user['name'] ?? '', style: const TextStyle(fontSize: 24)),
-                Text(user['email'] ?? '', style: const TextStyle(fontSize: 16)),
+void main() {
+  testWidgets('renders user profile UI', (WidgetTester tester) async {
+    final service = MockUserService();
+    await tester.pumpWidget(MaterialApp(
+      home: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            bottom: const TabBar(
+              tabs: [
+                Tab(text: 'Chat'),
+                Tab(text: 'Profile'),
               ],
-            );
-          } else {
-            return const Center(child: Text('No user data'));
-          }
-        },
+            ),
+          ),
+          body: TabBarView(
+            children: [
+              Container(),
+              UserProfile(userService: service),
+            ],
+          ),
+        ),
       ),
-    );
-  }
+    ));
+    await tester.pumpAndSettle();
+    // Switch to Profile tab
+    await tester.tap(find.widgetWithText(Tab, 'Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('alice@example.com'), findsOneWidget);
+  });
+
+  testWidgets('handles async update', (WidgetTester tester) async {
+    final service = MockUserService();
+    await tester.pumpWidget(MaterialApp(
+      home: UserProfile(userService: service),
+    ));
+    await tester.pumpAndSettle();
+    // Simulate update (could trigger a button in real widget)
+    expect(find.text('Alice'), findsOneWidget);
+  });
+
+  testWidgets('shows error state', (WidgetTester tester) async {
+    final service = MockUserService()..fail = true;
+    await tester.pumpWidget(MaterialApp(
+      home: UserProfile(userService: service),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('error', findRichText: true), findsOneWidget);
+  });
 }
