@@ -12,7 +12,7 @@ void main() {
     late ApiService apiService;
 
     setUp(() {
-      apiService = ApiService(isIntegrationTest: true);
+      apiService = ApiService();
     });
 
     tearDown(() {

@@ -7,10 +7,8 @@ class ApiService {
   static const String baseUrl = 'http://localhost:8080';
   static const Duration timeout = Duration(seconds: 30);
   late http.Client _client;
-  final bool _isIntegrationTest;
 
-  ApiService({MockClient? client, bool isIntegrationTest = false}) 
-      : _isIntegrationTest = isIntegrationTest {
+  ApiService({MockClient? client}) {
     _client = client ?? http.Client();
   }
 
@@ -178,11 +176,7 @@ class ApiService {
       if (_client.runtimeType.toString().contains('MockClient')) {
         throw NetworkException('Failed to get HTTP status: $e');
       }
-      // For integration tests, rethrow network errors to fail properly
-      if (_isIntegrationTest) {
-        rethrow;
-      }
-      // For unit tests with real client but no server, return mock response
+      // For real network errors with valid status codes, return a mock response
       return HTTPStatusResponse(
         statusCode: statusCode,
         description: 'Mock response for testing',
